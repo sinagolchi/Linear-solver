@@ -245,10 +245,16 @@ def analytic():
 
     sol_stat = []
     for sol in table:
-        if any(i < 0 for i in sol.values()):
-            sol_stat.append('Infeasible')
+        if type(sol) is dict:
+            if any(i < 0 for i in sol.values()):
+                sol_stat.append('Infeasible')
+            else:
+                sol_stat.append('Feasible')
         else:
-            sol_stat.append('Feasible')
+            if any(i < 0 for i in sol):
+                sol_stat.append('Infeasible')
+            else:
+                sol_stat.append('Feasible')
 
 
     df = pd.DataFrame()
@@ -266,16 +272,16 @@ def analytic():
     df.insert(len(df.columns),'Feasibility', sol_stat)
     df.fillna(0, inplace=True)
     zvalues = [ops[obj_op]((float(obj_x1)*df.iloc[i,1]),(float(obj_x2)*df.iloc[i,2])) for i in df.index]
+    df.insert(len(df.columns), 'Z value', zvalues)
     optimality = []
-    for z in zvalues:
+    for z,i in list(zip(df['Z value'],df.index)):
         print(np.around(z,4))
         print(np.around(Z,4))
-        if np.around(z,4) == np.around(Z,4):
+        if (np.around(z,4) == np.around(Z,4) and df['Feasibility'][i]=='Feasible'):
             optimality.append('Optimal')
         else:
             optimality.append('Not optimal')
 
-    df.insert(len(df.columns),'Z value',zvalues)
     df.insert(len(df.columns), 'Optimality', optimality)
     return df
 st.dataframe(data=analytic())
