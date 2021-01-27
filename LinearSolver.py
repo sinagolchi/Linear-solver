@@ -3,7 +3,6 @@ import SessionState
 import operator as op
 import pandas as pd
 import pulp as p
-import matplotlib.pyplot as plt
 import numpy as np
 from sympy import symbols,Eq,solve
 import itertools
@@ -41,6 +40,7 @@ constraints = []
 class constraint:
     def __init__(self,number):
         self.label = st.markdown('### Constraint ' + str(number))
+        self.name = "C" + str(number)
         self.col1, self.col2, self.col3, self.col4, self.col5 = st.beta_columns(5)
         with self.col1:
             self.entry1 = st.text_input('x1 const_' + str(number))
@@ -104,16 +104,16 @@ def solver():
         x2 = p.LpVariable("x2")  # Create a variable y >= 0
 
     # Objective Function
-    Lp_prob += ops[obj_op](float(obj_x1)* x1, float(obj_x2)*x2)
+    Lp_prob += ops[obj_op](float(obj_x1)* x1, float(obj_x2)*x2), "obj"
 
     # Constraints:
     for c in constraints:
-        Lp_prob += ops[str(c.combo2)](ops[c.combo1](float(c.entry1) * x1 , float(c.entry2) * x2) , float(c.entry3))
+        Lp_prob += ops[str(c.combo2)](ops[c.combo1](float(c.entry1) * x1 , float(c.entry2) * x2) , float(c.entry3)), c.name
 
     status = Lp_prob.solve()  # Solver
-    return status , p.value(x1), p.value(x2), p.value(Lp_prob.objective)
+    return status , p.value(x1), p.value(x2), p.value(Lp_prob.objective), Lp_prob.constraints.items()
 
-status, op_x1, op_x2, Z = solver()
+status, op_x1, op_x2, Z, sens = solver()
 
 st.markdown('## Solver results (Powered by PulP)')
 re_col1, re_col2 = st.beta_columns(2)
@@ -125,6 +125,29 @@ with re_col2:
     st.write('**Results: (x1 x2 Z)**')
     st.write(op_x1, op_x2, Z)
 
+st.markdown('## Sensitivity analysis (Powered by PulP)')
+col_name, col_exp, col_sp, col_slack = st.beta_columns(4)
+
+print("\nSensitivity Analysis\nConstraint\t\tShadow Price\tSlack")
+with col_name:
+    st.write('**Constraint**')
+    for name,c in list(sens):
+        st.write(name)
+
+with col_exp:
+    st.write('**Expression**')
+    for name, c in list(sens):
+        st.write(str(c))
+
+with col_sp:
+    st.write('**Shadow Price**')
+    for name, c in list(sens):
+        st.write(c.pi)
+
+with col_slack:
+    st.write('**Slack**')
+    for name, c in list(sens):
+        st.write(c.slack)
 
 st.markdown('## Graphical solution')
 
